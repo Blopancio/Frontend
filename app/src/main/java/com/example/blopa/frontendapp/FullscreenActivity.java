@@ -215,6 +215,7 @@ class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
             return true;
         }
         singleTap=true;
-        return false;
+        return true;
     }
+
 }
