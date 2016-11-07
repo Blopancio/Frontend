@@ -1,6 +1,8 @@
 package com.example.blopa.frontendapp;
 
 import android.annotation.SuppressLint;
+import android.content.res.Resources;
+import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
@@ -10,6 +12,8 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import android.widget.ImageView;
+import android.widget.TextView;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -138,6 +142,7 @@ public class FullscreenActivity extends AppCompatActivity {
         }
     }
 
+
     private void hide() {
         // Hide UI first
         ActionBar actionBar = getSupportActionBar();
@@ -173,26 +178,33 @@ public class FullscreenActivity extends AppCompatActivity {
         mHideHandler.postDelayed(mHideRunnable, delayMillis);
     }
 
+    public void setMap(View view) {
+        ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
+        image.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
+    }
 }
 class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
     private static final String DEBUG_TAG = "Gestures";
     private FullscreenActivity fsActivity;
     private Boolean singleTap= true;
+    private Boolean zoom= true;
 
     MyGestureListener(FullscreenActivity fsActivity){
         this.fsActivity=fsActivity;
     }
-/*
-    @Override
-    public void onShowPress(MotionEvent event) {
-        Log.d(DEBUG_TAG, "onShowPress: " + event.toString());
-    }
 
     @Override
-    public void onLongPress(MotionEvent event) {
-        Log.d(DEBUG_TAG, "onLongPress: " + event.toString());
+    public void onShowPress(MotionEvent event) {
+        ((TextView)fsActivity.findViewById(R.id.CoordinateX)).setText(String.format("Coordinate X: %s", event.getX()));
+        ((TextView)fsActivity.findViewById(R.id.CoordinateY)).setText(String.format("Coordinate Y: %s", event.getY()));
+        Log.d(DEBUG_TAG, "onShowPress: " + event.toString());
     }
-*/
+    /*
+        @Override
+        public void onLongPress(MotionEvent event) {
+            Log.d(DEBUG_TAG, "onLongPress: " + event.toString());
+        }
+    */
     @Override
     public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX,
                             float distanceY) {
@@ -202,6 +214,14 @@ class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
 
     @Override
     public boolean onDoubleTap(MotionEvent event) {
+        if(zoom) {
+            ((ImageView) fsActivity.findViewById(R.id.fullscreen_content)).setScaleType(ImageView.ScaleType.CENTER);
+            zoom=false;
+        }
+        else {
+            ((ImageView) fsActivity.findViewById(R.id.fullscreen_content)).setScaleType(ImageView.ScaleType.CENTER_CROP);
+            zoom=true;
+        }
         singleTap= false;
         Log.d(DEBUG_TAG, "onDoubleTap: " + event.toString());
         return true;
@@ -209,6 +229,7 @@ class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
 
     @Override
     public boolean onSingleTapConfirmed(MotionEvent event) {
+
         if(singleTap) {
             fsActivity.toggle();
             Log.d(DEBUG_TAG, "onSingleTapConfirmed: " + event.toString());
