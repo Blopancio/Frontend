@@ -1,58 +1,58 @@
 package com.example.blopa.frontendapp;
 
 import android.annotation.SuppressLint;
-import android.content.res.Resources;
+import android.graphics.Bitmap;
+import android.graphics.Matrix;
+import android.graphics.drawable.Drawable;
 import android.support.v4.content.ContextCompat;
 import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.FloatMath;
 import android.util.Log;
-import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
-import android.widget.TextView;
 import android.graphics.PointF;
 import android.graphics.drawable.ShapeDrawable;
 import android.graphics.drawable.shapes.OvalShape;
 import android.graphics.Color;
+import android.widget.TextView;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
  */
-public class FullscreenActivity extends AppCompatActivity {
-    /**
-     * Whether or not the system UI should be auto-hidden after
-     * {@link #AUTO_HIDE_DELAY_MILLIS} milliseconds.
-     */
-    private static final boolean AUTO_HIDE = true;
+public class FullscreenActivity extends AppCompatActivity implements View.OnTouchListener {
 
-    /**
-     * If {@link #AUTO_HIDE} is set, the number of milliseconds to wait after
-     * user interaction before hiding the system UI.
-     */
+    private static final boolean AUTO_HIDE = true;
     private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
 
-    /**
-     * Some older devices needs a small delay between UI widget updates
-     * and a change of the status and navigation bar.
-     */
     private static final int UI_ANIMATION_DELAY = 300;
     private final Handler mHideHandler = new Handler();
+    //private static final float MIN_ZOOM = 0.005f,MAX_ZOOM = 100f;
+
+    static final int NONE = 0;
+    static final int DRAG = 1;
+    static final int ZOOM = 2;
+    int mode = NONE;
+
+    Matrix matrix = new Matrix();
+    Matrix savedMatrix = new Matrix();
+    PointF start = new PointF();
+    PointF mid = new PointF();
+    float oldDist = 1f;
+    private float[] values;
+
+    private long startTime;
+
     private View mContentView;
-    private GestureDetectorCompat mDetector;
     private final Runnable mHidePart2Runnable = new Runnable() {
         @SuppressLint("InlinedApi")
         @Override
         public void run() {
-            // Delayed removal of status and navigation bar
-
-            // Note that some of these constants are new as of API 16 (Jelly Bean)
-            // and API 19 (KitKat). It is safe to use them, as they are inlined
-            // at compile-time and do nothing on earlier devices.
             mContentView.setSystemUiVisibility(View.SYSTEM_UI_FLAG_LOW_PROFILE
                     | View.SYSTEM_UI_FLAG_FULLSCREEN
                     | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
@@ -62,10 +62,10 @@ public class FullscreenActivity extends AppCompatActivity {
         }
     };
     private View mControlsView;
+
     private final Runnable mShowPart2Runnable = new Runnable() {
         @Override
         public void run() {
-            // Delayed display of UI elements
             ActionBar actionBar = getSupportActionBar();
             if (actionBar != null) {
                 actionBar.show();
@@ -73,6 +73,7 @@ public class FullscreenActivity extends AppCompatActivity {
             mControlsView.setVisibility(View.VISIBLE);
         }
     };
+
     private boolean mVisible;
     private final Runnable mHideRunnable = new Runnable() {
         @Override
@@ -80,52 +81,138 @@ public class FullscreenActivity extends AppCompatActivity {
             hide();
         }
     };
-    /**
-     * Touch listener to use for in-layout UI controls to delay hiding the
-     * system UI. This is to prevent the jarring behavior of controls going away
-     * while interacting with activity UI.
-     */
-    private final View.OnTouchListener mDelayHideTouchListener = new View.OnTouchListener() {
-        @Override
-        public boolean onTouch(View view, MotionEvent motionEvent) {
-            if (AUTO_HIDE) {
-                delayedHide(AUTO_HIDE_DELAY_MILLIS);
-            }
-            return false;
-        }
-    };
+    static private int MAX_DURATION_CLICK = 250;
+    private float accScale = oldDist;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         setContentView(R.layout.activity_fullscreen);
-        mDetector = new GestureDetectorCompat(this,new MyGestureListener(this));
         mVisible = true;
         mControlsView = findViewById(R.id.fullscreen_content_controls);
         mContentView = findViewById(R.id.fullscreen_content);
+        mContentView.setOnTouchListener(this);
+        startTime=0;
 
 
-        // Set up the user interaction to manually show or hide the system UI.
-        mContentView.setOnTouchListener(new View.OnTouchListener() {
-            @Override
-            public boolean onTouch(View v, MotionEvent event) {
-                return onTouchEvent(event);
-            }
-        });
-
-
-        // Upon interacting with UI controls, delay any scheduled hide()
-        // operations to prevent the jarring behavior of controls going away
-        // while interacting with the UI.
-        findViewById(R.id.dummy_button0).setOnTouchListener(mDelayHideTouchListener);
+        // Set up the user interaction to manually show or hide the system UI
     }
 
-
     @Override
-    public boolean onTouchEvent(MotionEvent event){
-        this.mDetector.onTouchEvent(event);
-        return super.onTouchEvent(event);
+    public boolean onTouch(View v, MotionEvent event) {
+        ImageView view = (ImageView) v;
+        view.setScaleType(ImageView.ScaleType.MATRIX);
+        float scale = oldDist;
+
+        //dumpEvent(event);
+        // Handle touch events here...
+
+        switch (event.getAction() & MotionEvent.ACTION_MASK)
+        {
+            case MotionEvent.ACTION_DOWN:   // first finger down only
+                startTime = System.currentTimeMillis();
+                savedMatrix.set(matrix);
+                start.set(event.getX(), event.getY());
+                Log.d("Probando", "mode=DRAG"); // write to LogCat
+                mode = DRAG;
+                int[] values = new int[2];
+                view.getLocationOnScreen(values);
+                Log.d("X & Y",values[0]+" "+values[1]);
+                break;
+
+            case MotionEvent.ACTION_UP: // first finger lifted
+                long time = System.currentTimeMillis() - startTime;
+                if(start.equals(event.getX(),event.getY())) {
+                    if (time > MAX_DURATION_CLICK) {
+                        ((TextView) findViewById(R.id.CoordinateX)).setText(String.format("Coordinate X: %s", event.getX()));
+                        ((TextView) findViewById(R.id.CoordinateY)).setText(String.format("Coordinate Y: %s", event.getY()));
+                        Log.d("Probando", "mode=LONGPRESS");
+                    } else {
+                        toggle();
+                        Log.d("Probando", "mode=CLICK");
+                    }
+                }
+                break;
+
+            case MotionEvent.ACTION_POINTER_UP: // second finger lifted
+                mode = NONE;
+                Log.d("Probando", "mode=SECONDFINGERUP");
+                break;
+
+            case MotionEvent.ACTION_POINTER_DOWN: // first and second finger down
+
+                start.set(event.getX(), event.getY());
+                oldDist = spacing(event);
+                Log.d("Probando", "mode=SECONDFINGERDOWN");
+                Log.d("Probando", "oldDist=" + oldDist);
+                if (oldDist > 5f) {
+                    savedMatrix.set(matrix);
+                    midPoint(mid, event);
+                    mode = ZOOM;
+                    Log.d("Probando", "mode=ZOOM");
+                }
+                break;
+
+            case MotionEvent.ACTION_MOVE:
+
+                if (mode == DRAG)
+                {
+                    Log.d("Imagen de tamaño","("+findViewById(R.id.fullscreen_content).getMeasuredWidth()+","+findViewById(R.id.fullscreen_content).getHeight()+")");
+                    matrix.set(savedMatrix);
+                    matrix.postTranslate(event.getX() - start.x, event.getY() - start.y); // create the transformation in the matrix  of points
+                }
+                else if (mode == ZOOM)
+                {
+                    // pinch zooming
+
+                    float newDist = spacing(event);
+                    Log.d("Probando", "newDist=" + newDist);
+                    if (newDist > 5f)
+                    {
+                        matrix.set(savedMatrix);
+                        scale = newDist / oldDist;
+                         // setting the scaling of the
+                        // matrix...if scale > 1 means
+                        // zoom in...if scale < 1 means
+                        // zoom out
+                       /* Log.d("asdfSC", ""+scale);
+                        if(accScale > MAX_ZOOM && scale > 1)
+                            scale=1;
+                        else if(accScale < MIN_ZOOM && scale < 1)
+                            scale=1;
+                        accScale=accScale*scale;
+                        Log.d("asdfAC", ""+accScale);*/
+                        matrix.postScale(scale, scale, mid.x, mid.y);
+                        
+                    }
+                }
+                break;
+        }
+        view.setMaxHeight(760);
+        view.setMaxWidth(1200);
+        view.setImageMatrix(matrix); // display the transformation on screen
+
+        return true; // indicate event was handled
+    }
+    private float spacing(MotionEvent event)
+    {
+        float x = event.getX(0) - event.getX(1);
+        float y = event.getY(0) - event.getY(1);
+        return (float)Math.sqrt(x * x + y * y);
+    }
+
+    private float rotation(MotionEvent event)
+    {
+        float x = start.x - event.getX(0);
+        float y = start.y - event.getY(0);
+        return 0;
+    }
+
+    private void midPoint(PointF point, MotionEvent event)
+    {
+        float x = event.getX(0) + event.getX(1);
+        float y = event.getY(0) + event.getY(1);
+        point.set(x / 2, y / 2);
     }
 
     @Override
@@ -185,6 +272,7 @@ public class FullscreenActivity extends AppCompatActivity {
     public void setMap(View view) {
         ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
         image.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
+        Log.d("setMap", "("+image.getMeasuredWidth()+","+image.getMeasuredHeight()+")");
     }
 
     public void setPosition(View view) {
@@ -196,62 +284,6 @@ public class FullscreenActivity extends AppCompatActivity {
         ImageView iv = (ImageView) findViewById(R.id.fullscreen_content);
         iv.setBackground(sd);
         ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
-    }
-}
-class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
-    private static final String DEBUG_TAG = "Gestures";
-    private FullscreenActivity fsActivity;
-    private Boolean singleTap= true;
-    private Boolean zoom= true;
-
-    MyGestureListener(FullscreenActivity fsActivity){
-        this.fsActivity=fsActivity;
-    }
-
-    @Override
-    public void onShowPress(MotionEvent event) {
-        ((TextView)fsActivity.findViewById(R.id.CoordinateX)).setText(String.format("Coordinate X: %s", event.getX()));
-        ((TextView)fsActivity.findViewById(R.id.CoordinateY)).setText(String.format("Coordinate Y: %s", event.getY()));
-        Log.d(DEBUG_TAG, "onShowPress: " + event.toString());
-    }
-    /*
-        @Override
-        public void onLongPress(MotionEvent event) {
-            Log.d(DEBUG_TAG, "onLongPress: " + event.toString());
-        }
-    */
-    @Override
-    public boolean onScroll(MotionEvent e1, MotionEvent e2, float distanceX,
-                            float distanceY) {
-        Log.d(DEBUG_TAG, "onScroll: " + e1.toString()+e2.toString());
-        return true;
-    }
-
-    @Override
-    public boolean onDoubleTap(MotionEvent event) {
-        if(zoom) {
-            ((ImageView) fsActivity.findViewById(R.id.fullscreen_content)).setScaleType(ImageView.ScaleType.CENTER);
-            zoom=false;
-        }
-        else {
-            ((ImageView) fsActivity.findViewById(R.id.fullscreen_content)).setScaleType(ImageView.ScaleType.CENTER_CROP);
-            zoom=true;
-        }
-        singleTap= false;
-        Log.d(DEBUG_TAG, "onDoubleTap: " + event.toString());
-        return true;
-    }
-
-    @Override
-    public boolean onSingleTapConfirmed(MotionEvent event) {
-
-        if(singleTap) {
-            fsActivity.toggle();
-            Log.d(DEBUG_TAG, "onSingleTapConfirmed: " + event.toString());
-            return true;
-        }
-        singleTap=true;
-        return true;
     }
 
 }
