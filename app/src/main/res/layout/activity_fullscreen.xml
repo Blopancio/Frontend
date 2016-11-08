@@ -60,11 +60,12 @@
             <Button
                 android:id="@+id/dummy_button1"
                 style="?metaButtonBarButtonStyle"
+                android:onClick="setPosition"
                 android:layout_width="wrap_content"
                 android:layout_marginTop="2dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:text="Si" />
+                android:text="setPosition" />
 
             <Button
                 android:id="@+id/dummy_button2"
@@ -88,7 +89,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/CoordinateY"
-                android:textAppearance="@style/TextAppearance.AppCompat.Large.Inverse" />
+                android:textAppearance="@style/TextAppearance.AppCompat.SearchResult.Title" />
 
             <TextView
                 android:text=""
@@ -97,7 +98,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:id="@+id/CoordinateX"
-                android:textAppearance="@style/TextAppearance.AppCompat.Large.Inverse" />
+                android:textAppearance="@android:style/TextAppearance.DeviceDefault.Widget.ActionMode.Title" />
 
 
         </RelativeLayout>

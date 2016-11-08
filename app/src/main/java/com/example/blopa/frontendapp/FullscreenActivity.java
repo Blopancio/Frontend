@@ -14,6 +14,10 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.graphics.PointF;
+import android.graphics.drawable.ShapeDrawable;
+import android.graphics.drawable.shapes.OvalShape;
+import android.graphics.Color;
 
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
@@ -181,6 +185,17 @@ public class FullscreenActivity extends AppCompatActivity {
     public void setMap(View view) {
         ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
         image.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
+    }
+
+    public void setPosition(View view) {
+        PointF point= new PointF(20,20);
+        ShapeDrawable sd = new ShapeDrawable(new OvalShape());
+        sd.setIntrinsicHeight(100);
+        sd.setIntrinsicWidth(100);
+        sd.getPaint().setColor(Color.parseColor("#abcd123"));
+        ImageView iv = (ImageView) findViewById(R.id.fullscreen_content);
+        iv.setBackground(sd);
+        ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
     }
 }
 class MyGestureListener extends GestureDetector.SimpleOnGestureListener {
