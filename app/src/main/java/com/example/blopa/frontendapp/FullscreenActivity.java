@@ -1,16 +1,14 @@
 package com.example.blopa.frontendapp;
 
 import android.annotation.SuppressLint;
-import android.graphics.Bitmap;
 import android.graphics.Matrix;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.support.v4.content.ContextCompat;
-import android.support.v4.view.GestureDetectorCompat;
 import android.support.v7.app.ActionBar;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.FloatMath;
 import android.util.Log;
 import android.view.MotionEvent;
 import android.view.View;
@@ -21,18 +19,18 @@ import android.graphics.drawable.shapes.OvalShape;
 import android.graphics.Color;
 import android.widget.TextView;
 
+
 /**
  * An example full-screen activity that shows and hides the system UI (i.e.
  * status bar and navigation/system bar) with user interaction.
  */
 public class FullscreenActivity extends AppCompatActivity implements View.OnTouchListener {
 
-    private static final boolean AUTO_HIDE = true;
-    private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
+    //private static final boolean AUTO_HIDE = true;
+    //private static final int AUTO_HIDE_DELAY_MILLIS = 3000;
 
     private static final int UI_ANIMATION_DELAY = 300;
     private final Handler mHideHandler = new Handler();
-    //private static final float MIN_ZOOM = 0.005f,MAX_ZOOM = 100f;
 
     static final int NONE = 0;
     static final int DRAG = 1;
@@ -44,7 +42,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
     PointF start = new PointF();
     PointF mid = new PointF();
     float oldDist = 1f;
-    private float[] values;
 
     private long startTime;
 
@@ -81,8 +78,11 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
             hide();
         }
     };
-    static private int MAX_DURATION_CLICK = 250;
-    private float accScale = oldDist;
+
+    private Drawable drawable;
+    private Rect imageBounds;
+    private float heightRatio;
+    private float widthRatio;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -93,7 +93,8 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
         mContentView = findViewById(R.id.fullscreen_content);
         mContentView.setOnTouchListener(this);
         startTime=0;
-
+        heightRatio=0;
+        widthRatio=0;
 
         // Set up the user interaction to manually show or hide the system UI
     }
@@ -102,10 +103,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
     public boolean onTouch(View v, MotionEvent event) {
         ImageView view = (ImageView) v;
         view.setScaleType(ImageView.ScaleType.MATRIX);
-        float scale = oldDist;
 
-        //dumpEvent(event);
-        // Handle touch events here...
 
         switch (event.getAction() & MotionEvent.ACTION_MASK)
         {
@@ -117,12 +115,13 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                 mode = DRAG;
                 int[] values = new int[2];
                 view.getLocationOnScreen(values);
-                Log.d("X & Y",values[0]+" "+values[1]);
+                Log.d("X & Y",widthRatio+" "+heightRatio);
                 break;
 
             case MotionEvent.ACTION_UP: // first finger lifted
                 long time = System.currentTimeMillis() - startTime;
                 if(start.equals(event.getX(),event.getY())) {
+                    int MAX_DURATION_CLICK = 250;
                     if (time > MAX_DURATION_CLICK) {
                         ((TextView) findViewById(R.id.CoordinateX)).setText(String.format("Coordinate X: %s", event.getX()));
                         ((TextView) findViewById(R.id.CoordinateY)).setText(String.format("Coordinate Y: %s", event.getY()));
@@ -164,13 +163,12 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                 else if (mode == ZOOM)
                 {
                     // pinch zooming
-
                     float newDist = spacing(event);
                     Log.d("Probando", "newDist=" + newDist);
                     if (newDist > 5f)
                     {
                         matrix.set(savedMatrix);
-                        scale = newDist / oldDist;
+                        float scale = newDist / oldDist;
                          // setting the scaling of the
                         // matrix...if scale > 1 means
                         // zoom in...if scale < 1 means
@@ -183,13 +181,11 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                         accScale=accScale*scale;
                         Log.d("asdfAC", ""+accScale);*/
                         matrix.postScale(scale, scale, mid.x, mid.y);
-                        
+
                     }
                 }
                 break;
         }
-        view.setMaxHeight(760);
-        view.setMaxWidth(1200);
         view.setImageMatrix(matrix); // display the transformation on screen
 
         return true; // indicate event was handled
@@ -201,12 +197,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
         return (float)Math.sqrt(x * x + y * y);
     }
 
-    private float rotation(MotionEvent event)
-    {
-        float x = start.x - event.getX(0);
-        float y = start.y - event.getY(0);
-        return 0;
-    }
 
     private void midPoint(PointF point, MotionEvent event)
     {
@@ -272,7 +262,44 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
     public void setMap(View view) {
         ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
         image.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
+        setCoordinate(image);
         Log.d("setMap", "("+image.getMeasuredWidth()+","+image.getMeasuredHeight()+")");
+    }
+
+    private void setCoordinate(ImageView imageView) {
+        drawable = imageView.getDrawable();
+        imageBounds = drawable.getBounds();
+
+        //original height and width of the bitmap
+        int intrinsicHeight = drawable.getIntrinsicHeight();
+        int intrinsicWidth = drawable.getIntrinsicWidth();
+        Log.d("Intri", intrinsicHeight + " "+ intrinsicWidth);
+
+        //height and width of the visible (scaled) image
+        float scaledHeight = imageView.getMeasuredHeight();
+        float scaledWidth = imageView.getMeasuredWidth();
+
+        Log.d("scaled", scaledHeight + " "+ scaledWidth);
+        //Find the ratio of the original image to the scaled image
+        //Should normally be equal unless a disproportionate scaling
+        //(e.g. fitXY) is used.
+        heightRatio = intrinsicHeight / scaledHeight;
+        widthRatio = intrinsicWidth / scaledWidth;
+
+        Log.d("ratios", heightRatio + " "+ widthRatio);
+        //do whatever magic to get your touch point
+        //MotionEvent event;
+
+        //get the distance from the left and top of the image bounds
+        //int scaledImageOffsetX = event.getX() - imageBounds.left;
+        //int scaledImageOffsetY = event.getY() - imageBounds.top;
+
+        //scale these distances according to the ratio of your scaling
+        //For example, if the original image is 1.5x the size of the scaled
+        //image, and your offset is (10, 20), your original image offset
+        //values should be (15, 30).
+        //int originalImageOffsetX = scaledImageOffsetX * widthRatio;
+        //int originalImageOffsetY = scaledImageOffsetY * heightRatio;
     }
 
     public void setPosition(View view) {
@@ -286,4 +313,16 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
         ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
     }
 
+    public void RotateLeft(View v) {
+        matrix.postTranslate(0,0);
+        matrix.postRotate(-90,findViewById(R.id.fullscreen_content).getMeasuredHeight()/2,findViewById(R.id.fullscreen_content).getMeasuredWidth()/2);
+        ((ImageView)findViewById(R.id.fullscreen_content)).setImageMatrix(matrix);
+    }
+
+    public void RotateRight(View v) {
+        matrix.postTranslate(0,0);
+        matrix.postRotate(90,findViewById(R.id.fullscreen_content).getMeasuredHeight()/2,findViewById(R.id.fullscreen_content).getMeasuredWidth()/2);
+        ((ImageView)findViewById(R.id.fullscreen_content)).setImageMatrix(matrix);
+
+    }
 }

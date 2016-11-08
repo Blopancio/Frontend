@@ -2,7 +2,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0099cc"
+    android:background="@color/black_overlay"
     tools:context="com.example.blopa.frontendapp.FullscreenActivity">
 
     <!-- The primary full-screen view. This can be replaced with whatever view
@@ -66,11 +66,22 @@
         <Button
             android:id="@+id/dummy_button2"
             style="?metaButtonBarButtonStyle"
+            android:onClick="RotateLeft"
             android:layout_width="wrap_content"
             android:layout_marginTop="2dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Adiós" />
+            android:text="RotateLeft" />
+
+        <Button
+            android:id="@+id/dummy_button3"
+            style="?metaButtonBarButtonStyle"
+            android:onClick="RotateRight"
+            android:layout_width="wrap_content"
+            android:layout_marginTop="2dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:text="Rotate Right" />
     </LinearLayout>
 
     <FrameLayout
