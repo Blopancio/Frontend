@@ -38,6 +38,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
     int mode = NONE;
 
     Matrix matrix = new Matrix();
+    Matrix matrixDot = new Matrix();
     Matrix savedMatrix = new Matrix();
     PointF start = new PointF();
     PointF mid = new PointF();
@@ -80,9 +81,10 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
     };
 
     private Drawable drawable;
-    private Rect imageBounds;
     private float heightRatio;
     private float widthRatio;
+    private float coordinateX;
+    private float coordinateY;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +97,10 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
         startTime=0;
         heightRatio=0;
         widthRatio=0;
+        coordinateX=0;
+        coordinateY=0;
+        View dot= findViewById(R.id.greenDot);
+        ((ImageView)dot).setImageAlpha(0);
 
         // Set up the user interaction to manually show or hide the system UI
     }
@@ -113,9 +119,6 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                 start.set(event.getX(), event.getY());
                 Log.d("Probando", "mode=DRAG"); // write to LogCat
                 mode = DRAG;
-                int[] values = new int[2];
-                view.getLocationOnScreen(values);
-                Log.d("X & Y",widthRatio+" "+heightRatio);
                 break;
 
             case MotionEvent.ACTION_UP: // first finger lifted
@@ -125,6 +128,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                     if (time > MAX_DURATION_CLICK) {
                         ((TextView) findViewById(R.id.CoordinateX)).setText(String.format("Coordinate X: %s", event.getX()));
                         ((TextView) findViewById(R.id.CoordinateY)).setText(String.format("Coordinate Y: %s", event.getY()));
+                        setPosition(event);
                         Log.d("Probando", "mode=LONGPRESS");
                     } else {
                         toggle();
@@ -151,7 +155,7 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                     Log.d("Probando", "mode=ZOOM");
                 }
                 break;
-
+/*
             case MotionEvent.ACTION_MOVE:
 
                 if (mode == DRAG)
@@ -173,18 +177,18 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
                         // matrix...if scale > 1 means
                         // zoom in...if scale < 1 means
                         // zoom out
-                       /* Log.d("asdfSC", ""+scale);
-                        if(accScale > MAX_ZOOM && scale > 1)
-                            scale=1;
-                        else if(accScale < MIN_ZOOM && scale < 1)
-                            scale=1;
-                        accScale=accScale*scale;
-                        Log.d("asdfAC", ""+accScale);*/
+                        //Log.d("asdfSC", ""+scale);
+                        //if(accScale > MAX_ZOOM && scale > 1)
+                        //    scale=1;
+                        //else if(accScale < MIN_ZOOM && scale < 1)
+                        //    scale=1;
+                        //accScale=accScale*scale;
+                        //Log.d("asdfAC", ""+accScale);
                         matrix.postScale(scale, scale, mid.x, mid.y);
 
                     }
                 }
-                break;
+                break;*/
         }
         view.setImageMatrix(matrix); // display the transformation on screen
 
@@ -261,14 +265,17 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
 
     public void setMap(View view) {
         ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
-        image.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
+        //image.setImageDrawable(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
+        image.setBackground(ContextCompat.getDrawable(this,R.drawable.tercerpisodcc));
         setCoordinate(image);
+        image.setScaleType(ImageView.ScaleType.MATRIX);
+        matrix.postScale(Math.min(1/widthRatio,1/heightRatio),Math.min(1/widthRatio,1/heightRatio));
+        image.setImageMatrix(matrix);
         Log.d("setMap", "("+image.getMeasuredWidth()+","+image.getMeasuredHeight()+")");
     }
 
     private void setCoordinate(ImageView imageView) {
-        drawable = imageView.getDrawable();
-        imageBounds = drawable.getBounds();
+        drawable = imageView.getBackground();
 
         //original height and width of the bitmap
         int intrinsicHeight = drawable.getIntrinsicHeight();
@@ -302,15 +309,18 @@ public class FullscreenActivity extends AppCompatActivity implements View.OnTouc
         //int originalImageOffsetY = scaledImageOffsetY * heightRatio;
     }
 
-    public void setPosition(View view) {
-        PointF point= new PointF(20,20);
-        ShapeDrawable sd = new ShapeDrawable(new OvalShape());
-        sd.setIntrinsicHeight(100);
-        sd.setIntrinsicWidth(100);
-        sd.getPaint().setColor(Color.parseColor("#abcd123"));
-        ImageView iv = (ImageView) findViewById(R.id.fullscreen_content);
-        iv.setBackground(sd);
-        ImageView image= ((ImageView)this.findViewById(R.id.fullscreen_content));
+    public void setPosition(MotionEvent event) {
+        //ImageView iv = (ImageView) findViewById(R.id.fullscreen_content);
+        ImageView dot = (ImageView) findViewById(R.id.greenDot);
+        dot.setImageAlpha(255);
+        dot.setScaleType(ImageView.ScaleType.MATRIX);
+        dot.setImageMatrix(matrixDot);
+        matrixDot.postTranslate(event.getX()-coordinateX, event.getY()-coordinateY);
+        coordinateX = event.getX();
+        coordinateY = event.getY();
+        dot.setImageMatrix(matrixDot);
+
+
     }
 
     public void RotateLeft(View v) {
